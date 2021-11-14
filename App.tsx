@@ -6,12 +6,15 @@
  */
 
  import React, { useState, FunctionComponent, useEffect, useCallback } from 'react';
- import { SafeAreaView, StatusBar, Button, View, Text, ViewProps, Image } from 'react-native';
+ import { SafeAreaView, StatusBar, Button, View, Text, ViewProps, Image, TextInput  } from 'react-native';
  
  import { EngineView, useEngine, EngineViewCallbacks } from '@babylonjs/react-native';
- import { Scene, Vector3, ArcRotateCamera, Camera, WebXRSessionManager, SceneLoader, TransformNode, DeviceSourceManager, DeviceType, DeviceSource, PointerInput, WebXRTrackingState, Nullable } from '@babylonjs/core';
+ import { Scene, Vector3, ArcRotateCamera, Camera, WebXRSessionManager, SceneLoader, TransformNode, DeviceSourceManager, DeviceType, DeviceSource, PointerInput, WebXRTrackingState, Nullable, MeshBuilder } from '@babylonjs/core';
  import '@babylonjs/loaders';
  import Slider from '@react-native-community/slider';
+
+ import * as BABYLON from '@babylonjs/core';
+(window as any).BABYLON = BABYLON;
  
  const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
    const defaultScale = 1;
@@ -22,28 +25,34 @@
    const [camera, setCamera] = useState<Camera>();
    const [rootNode, setRootNode] = useState<TransformNode>();
    const [scene, setScene] = useState<Scene>();
-   const [xrSession, setXrSession] = useState<WebXRSessionManager>();
+   // const [xrSession, setXrSession] = useState<WebXRSessionManager>();
    const [scale, setScale] = useState<number>(defaultScale);
    const [snapshotData, setSnapshotData] = useState<string>();
    const [engineViewCallbacks, setEngineViewCallbacks] = useState<EngineViewCallbacks>();
    const [trackingState, setTrackingState] = useState<WebXRTrackingState>();
+
+   const [value, onChangeText] = useState('Default');
  
    useEffect(() => {
      if (engine) {
-       const scene = new Scene(engine);
+       const scene: Scene = new Scene(engine);
        setScene(scene);
-       scene.createDefaultCamera(true);
-       (scene.activeCamera as ArcRotateCamera).beta -= Math.PI / 8;
+       // Create a free camera
+       scene.createDefaultCamera();
        setCamera(scene.activeCamera!);
+
        scene.createDefaultLight(true);
        const rootNode = new TransformNode('Root Container', scene);
        setRootNode(rootNode);
  
        const deviceSourceManager = new DeviceSourceManager(engine);
+
        const handlePointerInput = (inputIndex: PointerInput, previousState: Nullable<number>, currentState: Nullable<number>) => {
-         if (inputIndex === PointerInput.Horizontal &&
+         if (inputIndex === PointerInput.Vertical &&
            currentState && previousState) {
-           rootNode.rotate(Vector3.Down(), (currentState - previousState) * 0.005);
+           // rootNode.rotate(Vector3.Down(), (currentState - previousState) * 0.005);
+           scene.activeCamera.position.y += (currentState - previousState) * 0.0005
+
          };
        };
  
@@ -63,19 +72,26 @@
          }
        });
  
-       const transformContainer = new TransformNode('Transform Container', scene);
+       const transformContainer = new TransformNode('browseMessageTransform', scene);
        transformContainer.parent = rootNode;
        transformContainer.scaling.scaleInPlace(0.2);
        transformContainer.position.y -= .2;
+
+       // const writer = BABYLON.MeshWMeshWriter(scene, {scale:scale,defaultFont:"Arial"});
  
-       scene.beforeRender = function () {
-         transformContainer.rotate(Vector3.Up(), 0.005 * scene.getAnimationRatio());
-       };
- 
-       SceneLoader.ImportMeshAsync('', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF-Binary/BoxAnimated.glb').then(result => {
-         const mesh = result.meshes[0];
-         mesh.parent = transformContainer;
-       });
+      // ROTATE FROM TRANSFORM CONTAINER
+      //  scene.beforeRender = function () {
+      //    transformContainer.rotate(Vector3.Up(), 0.005 * scene.getAnimationRatio());
+      //  };
+
+       // const box = MeshBuilder.CreateBox("box", {height: 1, width: 1, depth: 1}, scene);
+       // box.parent = transformContainer;
+       
+      // IMPORT MESH FROM WEB
+      //  SceneLoader.ImportMeshAsync('', 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxAnimated/glTF-Binary/BoxAnimated.glb').then(result => {
+      //    const mesh = result.meshes[0];
+      //    mesh.parent = transformContainer;
+      //  });
      }
    }, [engine]);
  
@@ -89,34 +105,7 @@
      return trackingState === undefined ? '' : WebXRTrackingState[trackingState];
    };
  
-   const onToggleXr = useCallback(() => {
-     (async () => {
-       if (xrSession) {
-         await xrSession.exitXRAsync();
-       } else {
-         if (rootNode !== undefined && scene !== undefined) {
-           const xr = await scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true })
-           const session = await xr.baseExperience.enterXRAsync('immersive-ar', 'unbounded', xr.renderTarget);
-           setXrSession(session);
-           session.onXRSessionEnded.add(() => {
-             setXrSession(undefined);
-             setTrackingState(undefined);
-           })
- 
-           setTrackingState(xr.baseExperience.camera.trackingState);
-           xr.baseExperience.camera.onTrackingStateChanged.add((newTrackingState) => {
-             setTrackingState(newTrackingState);
-           });
- 
-           // TODO: Figure out why getFrontPosition stopped working
-           //box.position = (scene.activeCamera as TargetCamera).getFrontPosition(2);
-           const cameraRay = scene.activeCamera!.getForwardRay(1);
-           rootNode.position = cameraRay.origin.add(cameraRay.direction.scale(cameraRay.length));
-           rootNode.rotate(Vector3.Up(), 3.14159);
-         }
-       }
-     })();
-   }, [rootNode, scene, xrSession]);
+   
  
    const onInitialized = useCallback(async(engineViewCallbacks: EngineViewCallbacks) => {
      setEngineViewCallbacks(engineViewCallbacks);
@@ -127,12 +116,19 @@
        setSnapshotData('data:image/jpeg;base64,' + await engineViewCallbacks.takeSnapshot());
      }
    }, [engineViewCallbacks]);
+
+   function sendMessage() {
+     console.log("sending : ", value);
+     if (engine) {
+        const box = MeshBuilder.CreateBox("box", {height: 2, width: 1, depth: 1}, scene);
+        box.parent = scene.getTransformNodeByName('browseMessageTransform');
+     }
+   }
  
    return (
      <>
        <View style={props.style}>
-         <Button title="Toggle EngineView" onPress={() => { setToggleView(!toggleView) }} />
-         <Button title={ xrSession ? 'Stop XR' : 'Start XR'} onPress={onToggleXr} />
+         {/* <Button title="Toggle EngineView" onPress={() => { setToggleView(!toggleView) }} /> */}
          { !toggleView &&
            <View style={{flex: 1}}>
              { enableSnapshots && 
@@ -153,6 +149,12 @@
            </View>
          }
        </View>
+       <TextInput
+        multiline
+        onChangeText={text => onChangeText(text)}
+        value={value}
+      />
+      <Button title="Send" onPress={() => {sendMessage()}} />
      </>
    );
  };
@@ -173,7 +175,7 @@
              <Text style={{fontSize: 12}}>Engine has been disposed, and will be recreated.</Text>
            </View>
          }
-         <Button title="Toggle EngineScreen" onPress={() => { setToggleScreen(!toggleScreen); }} />
+         {/* <Button title="Toggle EngineScreen" onPress={() => { setToggleScreen(!toggleScreen); }} />*/}
        </SafeAreaView>
      </>
    );
