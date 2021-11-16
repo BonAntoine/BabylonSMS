@@ -9,12 +9,11 @@
  import { SafeAreaView, StatusBar, Button, View, Text, ViewProps, Image, TextInput  } from 'react-native';
  
  import { EngineView, useEngine, EngineViewCallbacks } from '@babylonjs/react-native';
- import { Scene, Vector3, ArcRotateCamera, Camera, WebXRSessionManager, SceneLoader, TransformNode, DeviceSourceManager, DeviceType, DeviceSource, PointerInput, WebXRTrackingState, Nullable, MeshBuilder } from '@babylonjs/core';
+ import { Scene, Vector3, ArcRotateCamera, Camera, WebXRSessionManager, SceneLoader, TransformNode, DeviceSourceManager, DeviceType, DeviceSource, PointerInput, WebXRTrackingState, Nullable, MeshBuilder, Scalar } from '@babylonjs/core';
  import '@babylonjs/loaders';
  import Slider from '@react-native-community/slider';
 
- import * as BABYLON from '@babylonjs/core';
-(window as any).BABYLON = BABYLON;
+ import { MeshWriter } from "meshwriter";
  
  const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
    const defaultScale = 1;
@@ -51,7 +50,8 @@
          if (inputIndex === PointerInput.Vertical &&
            currentState && previousState) {
            // rootNode.rotate(Vector3.Down(), (currentState - previousState) * 0.005);
-           scene.activeCamera.position.y += (currentState - previousState) * 0.0005
+           
+           scene.activeCamera!.position.y += (currentState - previousState) * 0.0005
 
          };
        };
@@ -77,7 +77,52 @@
        transformContainer.scaling.scaleInPlace(0.2);
        transformContainer.position.y -= .2;
 
-       // const writer = BABYLON.MeshWMeshWriter(scene, {scale:scale,defaultFont:"Arial"});
+       // Declared variable starting with upper case because it's a constructor
+       let Writer = MeshWriter(scene, {scale:scale,defaultFont:"Arial"});
+
+      
+       let textMesh = new Writer("Hello World", {
+        "font-family": "Arial",
+        "letter-height": 100,
+        "letter-thickness": 1,
+        color: "#1C3870",
+        anchor: "center",
+        colors: {
+      diffuse: "#F0F0F0",
+      specular: "#000000",
+      ambient: "#F0F0F0",
+      emissive: "#ff00f0"
+        },
+        position: {
+      x: -10,
+      y: 10,
+      z: 50
+        }
+      });
+
+      //Text Writer create SPS with Particle for each letter
+      let SPS =  textMesh.getSPS();
+      
+      for (let p = 0; p < SPS.nbParticles; p++) {
+        const particle = SPS.particles[p];
+        //Place particles at random positions with a cube
+        particle.position.x = Scalar.RandomRange(50, 150);
+        particle.position.y = Scalar.RandomRange(150, 50);
+        particle.position.z = Scalar.RandomRange(50, 150);
+    }
+
+      // //Update animation
+      // SPS.updateParticle =  (particle)=> {
+      //   particle.rotation.x -= 0.06;
+      // };
+
+      // scene.registerBeforeRender( ()=> {
+      // SPS.setParticles();
+      // //sps.mesh.rotation.y = k;
+      // });
+
+      
+
  
       // ROTATE FROM TRANSFORM CONTAINER
       //  scene.beforeRender = function () {
@@ -101,9 +146,9 @@
      }
    }, [rootNode, scale]);
  
-   const trackingStateToString = (trackingState: WebXRTrackingState | undefined) : string => {
-     return trackingState === undefined ? '' : WebXRTrackingState[trackingState];
-   };
+  //  const trackingStateToString = (trackingState: WebXRTrackingState | undefined) : string => {
+  //    return trackingState === undefined ? '' : WebXRTrackingState[trackingState];
+  //  };
  
    
  
@@ -139,7 +184,7 @@
              }
              <EngineView camera={camera} onInitialized={onInitialized} displayFrameRate={true} />
              <Slider style={{position: 'absolute', minHeight: 50, margin: 10, left: 0, right: 0, bottom: 0}} minimumValue={0.2} maximumValue={2} step={0.01} value={defaultScale} onValueChange={setScale} />
-             <Text style={{color: 'yellow',  position: 'absolute', margin: 3}}>{trackingStateToString(trackingState)}</Text>
+             <Text style={{color: 'yellow',  position: 'absolute', margin: 3}}>{/*trackingStateToString(trackingState)*/}</Text>
            </View>
          }
          { toggleView &&
