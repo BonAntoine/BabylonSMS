@@ -53,8 +53,8 @@
            currentState && previousState) {
            // rootNode.rotate(Vector3.Down(), (currentState - previousState) * 0.005);
            
-           scene.activeCamera!.position.y += (currentState - previousState) * 0.0005
-
+           scene.activeCamera!.position.y += (currentState - previousState) * 0.0005;
+           SPS.mesh.position.y -= (currentState - previousState) * 0.05;
          };
        };
  
@@ -76,16 +76,16 @@
  
        const transformContainer = new TransformNode('browseMessageTransform', scene);
        transformContainer.parent = rootNode;
-       transformContainer.scaling.scaleInPlace(0.2);
+       // transformContainer.scaling.scaleInPlace(0.2);
        transformContainer.position.y -= .2;
 
        // Declared variable starting with upper case because it's a constructor
-       let Writer = MeshWriter(scene, {scale:scale,defaultFont:"Arial"});
+       let Writer = MeshWriter(scene, {scale: 1, defaultFont:"Arial"});
 
       
-       let textMesh = new Writer("Hello World", {
+       let textMesh = new Writer("Default", {
         "font-family": "Arial",
-        "letter-height": 100,
+        "letter-height": 7,
         "letter-thickness": 1,
         color: "#1C3870",
         anchor: "center",
@@ -108,19 +108,22 @@
       for (let p = 0; p < SPS.nbParticles; p++) {
         const particle = SPS.particles[p];
         //Place particles at random positions with a cube
-        particle.position.x = Scalar.RandomRange(50, 150);
-        particle.position.y = Scalar.RandomRange(150, 50);
-        particle.position.z = Scalar.RandomRange(50, 150);
-    }
+        particle.position.x += 6;
+        particle.position.y -= 1;
+        // particle.position.z += 2;
 
-      // //Update animation
+        particle.rotation.x = 5;
+      }
+      SPS.setParticles();
+
+      //Update animation
       // SPS.updateParticle =  (particle)=> {
       //   particle.rotation.x -= 0.06;
       // };
 
       // scene.registerBeforeRender( ()=> {
-      // SPS.setParticles();
-      // //sps.mesh.rotation.y = k;
+      //   SPS.setParticles();
+      //   // SPS.mesh.rotation.y -= 0.06;
       // });
 
       
