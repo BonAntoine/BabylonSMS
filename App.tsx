@@ -13,6 +13,8 @@
  import '@babylonjs/loaders';
  import Slider from '@react-native-community/slider';
 
+ import * as BABYLON from '@babylonjs/core';
+ (window as any).BABYLON = BABYLON;
  import { MeshWriter } from "meshwriter";
  
  const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
